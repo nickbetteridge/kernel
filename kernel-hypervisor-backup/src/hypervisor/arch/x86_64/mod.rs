@@ -8,6 +8,8 @@ use crate::hypervisor::vcpu::{VcpuExit, VcpuRegs};
 
 pub mod vmx;
 pub mod svm;
+pub mod vmcs;
+pub mod vmcb;
 
 /// Virtualization technology type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
