@@ -10,6 +10,7 @@ pub mod vmx;
 pub mod svm;
 pub mod vmcs;
 pub mod vmcb;
+pub mod ept;
 
 /// Virtualization technology type
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
