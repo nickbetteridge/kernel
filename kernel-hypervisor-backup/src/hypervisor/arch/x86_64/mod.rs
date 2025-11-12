@@ -124,12 +124,18 @@ fn detect_virt_tech() -> Result<VirtTech> {
 pub fn detect_capabilities() -> Result<HypervisorCaps> {
     let virt_tech = detect_virt_tech()?;
 
+    // All three modes are supported on x86_64 with hardware virtualization
+    let supported_modes = crate::hypervisor::ModeSupportFlags::TYPE1
+        | crate::hypervisor::ModeSupportFlags::VIRTIO
+        | crate::hypervisor::ModeSupportFlags::HVT;
+
     Ok(HypervisorCaps {
         hw_virt_available: true,
         arch: HypervisorArch::X86_64,
         max_vms: 64,           // Arbitrary limit for now
         max_vcpus_per_vm: 256, // Arbitrary limit for now
         nested_virt: false,    // Not implemented yet
+        supported_modes,
     })
 }
 

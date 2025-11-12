@@ -112,12 +112,18 @@ pub fn detect_capabilities() -> Result<HypervisorCaps> {
         return Err(HypervisorError::NotSupported);
     }
 
+    // All three modes are supported on aarch64 with EL2
+    let supported_modes = crate::hypervisor::ModeSupportFlags::TYPE1
+        | crate::hypervisor::ModeSupportFlags::VIRTIO
+        | crate::hypervisor::ModeSupportFlags::HVT;
+
     Ok(HypervisorCaps {
         hw_virt_available: true,
         arch: HypervisorArch::Aarch64,
         max_vms: 64,
         max_vcpus_per_vm: 256,
         nested_virt: false,
+        supported_modes,
     })
 }
 

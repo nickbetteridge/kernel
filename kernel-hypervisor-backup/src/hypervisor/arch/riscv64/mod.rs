@@ -117,12 +117,18 @@ pub fn detect_capabilities() -> Result<HypervisorCaps> {
         return Err(HypervisorError::NotSupported);
     }
 
+    // All three modes are supported on riscv64 with H-extension
+    let supported_modes = crate::hypervisor::ModeSupportFlags::TYPE1
+        | crate::hypervisor::ModeSupportFlags::VIRTIO
+        | crate::hypervisor::ModeSupportFlags::HVT;
+
     Ok(HypervisorCaps {
         hw_virt_available: true,
         arch: HypervisorArch::Riscv64,
         max_vms: 64,
         max_vcpus_per_vm: 256,
         nested_virt: false,
+        supported_modes,
     })
 }
 
