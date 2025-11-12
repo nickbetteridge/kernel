@@ -1,0 +1,87 @@
+[package]
+name = "kernel"
+version = "0.5.12"
+build = "build.rs"
+edition = "2024"
+
+[build-dependencies]
+cc = "1.0"
+toml = "0.8"
+
+[dependencies]
+arrayvec = { version = "0.7.4", default-features = false }
+bitfield = "0.13.2"
+bitflags = "2"
+hashbrown = { version = "0.14.3", default-features = false, features = ["ahash", "inline-more"] }
+linked_list_allocator = "0.9.0"
+redox-path = "0.2.0"
+redox_syscall = { git = "https://gitlab.redox-os.org/redox-os/syscall.git", branch = "master", default-features = false }
+rmm = { path = "rmm", default-features = false }
+slab = { version = "0.4", default-features = false }
+spin = { version = "0.9.8" }
+# TODO: Remove
+indexmap = { version = "2.5.0", default-features = false }
+
+[dependencies.object]
+version = "0.37.1"
+default-features = false
+features = ["read_core", "elf"]
+
+[dependencies.rustc-demangle]
+version = "0.1.16"
+default-features = false
+
+[target.'cfg(any(target_arch = "aarch64", target_arch = "riscv64"))'.dependencies]
+fdt = { git = "https://github.com/repnop/fdt.git", rev = "2fb1409edd1877c714a0aa36b6a7c5351004be54" }
+
+[target.'cfg(any(target_arch = "x86", target_arch = "x86_64"))'.dependencies]
+raw-cpuid = "10.2.0"
+x86 = { version = "0.47.0", default-features = false }
+
+[target.'cfg(any(target_arch = "riscv64", target_arch = "riscv32"))'.dependencies]
+sbi-rt = "0.0.3"
+
+[features]
+default = [
+  "acpi",
+  #"debugger",
+  "multi_core",
+  "serial_debug",
+  "self_modifying",
+  "x86_kvm_pv",
+  #"syscall_debug"
+]
+
+# Activates some limited code-overwriting optimizations, based on CPU features.
+self_modifying = []
+
+acpi = []
+lpss_debug = []
+multi_core = ["acpi"]
+profiling = []
+#TODO: remove when threading issues are fixed
+pti = []
+qemu_debug = []
+serial_debug = []
+system76_ec_debug = []
+x86_kvm_pv = []
+
+debugger = ["syscall_debug"]
+syscall_debug = []
+
+sys_fdstat = []
+
+# Hypervisor support (Type 1, VirtIO, HVT modes)
+hypervisor = []
+
+[profile.dev]
+# Avoids having to define the eh_personality lang item and reduces kernel size
+panic = "abort"
+
+[profile.release]
+# Avoids having to define the eh_personality lang item and reduces kernel size
+panic = "abort"
+
+#lto = true
+
+debug = "full"
