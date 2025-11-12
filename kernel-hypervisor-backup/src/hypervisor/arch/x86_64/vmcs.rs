@@ -8,7 +8,8 @@
 //! - VM entry controls
 
 use crate::hypervisor::{HypervisorError, Result};
-use crate::memory;
+use crate::memory::{self, Frame};
+use crate::paging::PhysicalAddress;
 
 /// VMCS region (4KB aligned)
 #[repr(C, align(4096))]
@@ -21,9 +22,9 @@ impl Vmcs {
     /// Allocate a new VMCS
     pub fn new(revision_id: u32) -> Result<VmcsHandle> {
         // Allocate 4KB-aligned frame
-        let frame = memory::Frame::allocate()
+        let frame = memory::allocate_frame()
             .ok_or(HypervisorError::OutOfMemory)?;
-        let phys_addr = frame.start_address().data();
+        let phys_addr = frame.base().data();
 
         // Initialize VMCS header
         let virt_addr = crate::memory::phys_to_virt(phys_addr);
@@ -204,8 +205,11 @@ impl VmcsHandle {
 
 impl Drop for VmcsHandle {
     fn drop(&mut self) {
-        // TODO: Deallocate frame at phys_addr
-        log::trace!("VMCS: Dropping VMCS at {:#x}", self.phys_addr);
+        unsafe {
+            let frame = Frame::containing(PhysicalAddress::new(self.phys_addr));
+            memory::deallocate_frame(frame);
+        }
+        log::trace!("VMCS: Dropped VMCS at {:#x}", self.phys_addr);
     }
 }
 

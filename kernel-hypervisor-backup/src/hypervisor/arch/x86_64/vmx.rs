@@ -1,7 +1,8 @@
 //! Intel VMX (Virtual Machine Extensions) support
 
 use crate::hypervisor::Result;
-use crate::memory;
+use crate::memory::{self, Frame};
+use crate::paging::PhysicalAddress;
 use core::arch::x86_64::__cpuid;
 use core::sync::atomic::{AtomicU64, Ordering};
 
@@ -77,11 +78,9 @@ unsafe fn enable_vmx_operation() -> Result<()> {
     log::debug!("VMX: VMCS revision ID: {:#x}", vmcs_revision_id);
 
     // Allocate VMXON region (4KB aligned)
-    // TODO: Use proper kernel memory allocator
-    // For now, we'll allocate a static aligned region
-    let vmxon_region = memory::Frame::allocate()
+    let vmxon_frame = memory::allocate_frame()
         .ok_or(crate::hypervisor::HypervisorError::OutOfMemory)?;
-    let vmxon_phys = vmxon_region.start_address().data();
+    let vmxon_phys = vmxon_frame.base().data();
 
     // Write VMCS revision ID to VMXON region
     let vmxon_virt = crate::memory::phys_to_virt(vmxon_phys);
@@ -142,7 +141,8 @@ pub unsafe fn disable() -> Result<()> {
     // Free VMXON region
     let vmxon_phys = VMXON_REGION.swap(0, Ordering::AcqRel);
     if vmxon_phys != 0 {
-        // TODO: Deallocate frame at vmxon_phys
+        let frame = Frame::containing(PhysicalAddress::new(vmxon_phys));
+        memory::deallocate_frame(frame);
     }
 
     log::info!("VMX: VMX operation disabled");

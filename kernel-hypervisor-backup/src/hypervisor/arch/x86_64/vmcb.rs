@@ -5,7 +5,8 @@
 //! - State Save Area (0x400-0xFFF): Guest and host state
 
 use crate::hypervisor::{HypervisorError, Result};
-use crate::memory;
+use crate::memory::{self, Frame};
+use crate::paging::PhysicalAddress;
 
 /// VMCB Control Area (first 1KB of VMCB)
 #[repr(C, packed)]
@@ -177,9 +178,9 @@ impl Vmcb {
     /// Allocate a new VMCB
     pub fn new() -> Result<VmcbHandle> {
         // Allocate 4KB-aligned frame
-        let frame = memory::Frame::allocate()
+        let frame = memory::allocate_frame()
             .ok_or(HypervisorError::OutOfMemory)?;
-        let phys_addr = frame.start_address().data();
+        let phys_addr = frame.base().data();
 
         // Clear VMCB
         let virt_addr = crate::memory::phys_to_virt(phys_addr);
@@ -325,8 +326,11 @@ impl Vmcb {
 
 impl Drop for VmcbHandle {
     fn drop(&mut self) {
-        // TODO: Deallocate frame at phys_addr
-        log::trace!("VMCB: Dropping VMCB at {:#x}", self.phys_addr);
+        unsafe {
+            let frame = Frame::containing(PhysicalAddress::new(self.phys_addr));
+            memory::deallocate_frame(frame);
+        }
+        log::trace!("VMCB: Dropped VMCB at {:#x}", self.phys_addr);
     }
 }
 

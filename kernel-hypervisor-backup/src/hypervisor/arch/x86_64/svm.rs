@@ -1,7 +1,8 @@
 //! AMD SVM (Secure Virtual Machine) support
 
 use crate::hypervisor::Result;
-use crate::memory;
+use crate::memory::{self, Frame};
+use crate::paging::PhysicalAddress;
 use core::arch::x86_64::__cpuid;
 use core::sync::atomic::{AtomicU64, Ordering};
 
@@ -76,9 +77,9 @@ const MSR_VM_HSAVE_PA: u32 = 0xC0010117; // Host Save Area Physical Address
 /// Enable SVM operation by setting EFER.SVME
 unsafe fn enable_svm_operation() -> Result<()> {
     // Allocate Host Save Area (4KB aligned)
-    let host_save_area = memory::Frame::allocate()
+    let host_save_frame = memory::allocate_frame()
         .ok_or(crate::hypervisor::HypervisorError::OutOfMemory)?;
-    let host_save_phys = host_save_area.start_address().data();
+    let host_save_phys = host_save_frame.base().data();
 
     // Clear the host save area
     let host_save_virt = crate::memory::phys_to_virt(host_save_phys);
@@ -119,7 +120,8 @@ pub unsafe fn disable() -> Result<()> {
     // Free Host Save Area
     let host_save_phys = HOST_SAVE_AREA.swap(0, Ordering::AcqRel);
     if host_save_phys != 0 {
-        // TODO: Deallocate frame at host_save_phys
+        let frame = Frame::containing(PhysicalAddress::new(host_save_phys));
+        memory::deallocate_frame(frame);
     }
 
     log::info!("SVM: SVM operation disabled");
